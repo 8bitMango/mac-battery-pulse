@@ -4,9 +4,11 @@ import { CpuMonitor } from './CpuMonitor';
 import { BatteryHealth } from './BatteryHealth';
 import { SystemOverview } from './SystemOverview';
 import { Activity, Battery, HardDrive, Thermometer } from 'lucide-react';
+import { useSystemData } from '@/hooks/useSystemData';
 
 export const SystemMonitor = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { data: systemData, loading, error } = useSystemData();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -15,6 +17,29 @@ export const SystemMonitor = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading system data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !systemData) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="w-8 h-8 text-destructive mx-auto mb-4" />
+          <p className="text-destructive">Error loading system data</p>
+          <p className="text-muted-foreground text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -42,7 +67,7 @@ export const SystemMonitor = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">CPU Usage</p>
-                <p className="text-2xl font-bold text-foreground">24%</p>
+                <p className="text-2xl font-bold text-foreground">{systemData.cpu.usage}%</p>
               </div>
             </div>
           </Card>
@@ -54,7 +79,7 @@ export const SystemMonitor = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Battery</p>
-                <p className="text-2xl font-bold text-foreground">87%</p>
+                <p className="text-2xl font-bold text-foreground">{systemData.battery.level}%</p>
               </div>
             </div>
           </Card>
@@ -66,7 +91,7 @@ export const SystemMonitor = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Memory</p>
-                <p className="text-2xl font-bold text-foreground">16 GB</p>
+                <p className="text-2xl font-bold text-foreground">{systemData.memory.usage}%</p>
               </div>
             </div>
           </Card>
@@ -78,7 +103,7 @@ export const SystemMonitor = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Temperature</p>
-                <p className="text-2xl font-bold text-foreground">42°C</p>
+                <p className="text-2xl font-bold text-foreground">{systemData.cpu.temperature}°C</p>
               </div>
             </div>
           </Card>
@@ -86,12 +111,12 @@ export const SystemMonitor = () => {
 
         {/* Main Monitor Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <CpuMonitor />
-          <BatteryHealth />
+          <CpuMonitor systemData={systemData} />
+          <BatteryHealth systemData={systemData} />
         </div>
 
         {/* System Details */}
-        <SystemOverview />
+        <SystemOverview systemData={systemData} />
       </div>
     </div>
   );

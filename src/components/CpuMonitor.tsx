@@ -2,42 +2,22 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Cpu, TrendingUp, Zap } from 'lucide-react';
+import { SystemData } from '@/hooks/useSystemData';
 
-interface CpuCore {
-  id: number;
-  usage: number;
-  frequency: number;
+interface CpuMonitorProps {
+  systemData: SystemData;
 }
 
-export const CpuMonitor = () => {
-  const [cpuCores, setCpuCores] = useState<CpuCore[]>([
-    { id: 1, usage: 15, frequency: 2.4 },
-    { id: 2, usage: 32, frequency: 2.8 },
-    { id: 3, usage: 8, frequency: 2.1 },
-    { id: 4, usage: 45, frequency: 3.2 },
-    { id: 5, usage: 22, frequency: 2.6 },
-    { id: 6, usage: 38, frequency: 3.0 },
-    { id: 7, usage: 12, frequency: 2.3 },
-    { id: 8, usage: 28, frequency: 2.9 },
-  ]);
-
+export const CpuMonitor = ({ systemData }: CpuMonitorProps) => {
   const [cpuHistory, setCpuHistory] = useState<number[]>([
     20, 25, 18, 32, 28, 35, 22, 40, 36, 29, 33, 27, 31, 24, 38, 42, 35, 29, 32, 28
   ]);
 
-  const averageCpuUsage = Math.round(cpuCores.reduce((sum, core) => sum + core.usage, 0) / cpuCores.length);
+  const { cpu } = systemData;
+  const averageCpuUsage = cpu.usage;
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Simulate real-time CPU data updates
-      setCpuCores(prev => 
-        prev.map(core => ({
-          ...core,
-          usage: Math.max(5, Math.min(95, core.usage + (Math.random() - 0.5) * 10)),
-          frequency: Math.max(1.8, Math.min(3.8, core.frequency + (Math.random() - 0.5) * 0.2))
-        }))
-      );
-
       setCpuHistory(prev => {
         const newHistory = [...prev.slice(1), averageCpuUsage];
         return newHistory;
@@ -70,7 +50,7 @@ export const CpuMonitor = () => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-foreground">CPU Monitor</h3>
-              <p className="text-sm text-muted-foreground">Intel Core i9-13900K</p>
+              <p className="text-sm text-muted-foreground">{systemData.system.cpuBrand}</p>
             </div>
           </div>
           <div className="text-right">
@@ -109,16 +89,16 @@ export const CpuMonitor = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            {cpuCores.map((core) => (
-              <div key={core.id} className="space-y-2">
+            {cpu.cores.map((core, index) => (
+              <div key={index} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Core {core.id}</span>
+                  <span className="text-sm text-muted-foreground">Core {index + 1}</span>
                   <div className="flex items-center space-x-2">
                     <span className={`text-sm font-medium ${getUsageColor(core.usage)}`}>
                       {core.usage}%
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {core.frequency.toFixed(1)}GHz
+                      {cpu.frequency.toFixed(1)}GHz
                     </span>
                   </div>
                 </div>

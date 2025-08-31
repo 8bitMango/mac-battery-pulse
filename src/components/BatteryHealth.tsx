@@ -2,43 +2,28 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Battery, BatteryLow, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
+import { SystemData } from '@/hooks/useSystemData';
 
-interface BatteryData {
-  charge: number;
-  health: number;
-  cycles: number;
-  temperature: number;
-  isCharging: boolean;
-  timeRemaining: string;
-  capacity: string;
-  status: 'excellent' | 'good' | 'fair' | 'poor';
+interface BatteryHealthProps {
+  systemData: SystemData;
 }
 
-export const BatteryHealth = () => {
-  const [batteryData, setBatteryData] = useState<BatteryData>({
-    charge: 87,
-    health: 92,
-    cycles: 186,
-    temperature: 32,
-    isCharging: false,
-    timeRemaining: '4h 23m',
-    capacity: '4,374 mAh',
-    status: 'excellent'
-  });
+export const BatteryHealth = ({ systemData }: BatteryHealthProps) => {
+  const { battery } = systemData;
+  const [batteryHistory, setBatteryHistory] = useState<number[]>([
+    85, 86, 87, 86, 85, 87, 88, 87, 86, 87
+  ]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setBatteryData(prev => ({
-        ...prev,
-        charge: prev.isCharging 
-          ? Math.min(100, prev.charge + Math.random() * 2)
-          : Math.max(0, prev.charge - Math.random() * 0.5),
-        temperature: Math.max(25, Math.min(45, prev.temperature + (Math.random() - 0.5) * 2)),
-      }));
-    }, 3000);
+      setBatteryHistory(prev => {
+        const newHistory = [...prev.slice(1), battery.level];
+        return newHistory;
+      });
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [battery.level]);
 
   const getChargeColor = (charge: number) => {
     if (charge > 50) return 'text-success';
@@ -52,8 +37,17 @@ export const BatteryHealth = () => {
     return 'text-destructive';
   };
 
+  const getStatusFromHealth = (health: number): 'excellent' | 'good' | 'fair' | 'poor' => {
+    if (health > 90) return 'excellent';
+    if (health > 80) return 'good';
+    if (health > 60) return 'fair';
+    return 'poor';
+  };
+
+  const status = getStatusFromHealth(battery.health);
+
   const getStatusIcon = () => {
-    switch (batteryData.status) {
+    switch (status) {
       case 'excellent':
         return <CheckCircle className="w-5 h-5 text-success" />;
       case 'good':
@@ -68,13 +62,20 @@ export const BatteryHealth = () => {
   };
 
   const getChargeIcon = () => {
-    if (batteryData.isCharging) {
+    if (battery.isCharging) {
       return <Zap className="w-6 h-6 text-primary animate-pulse" />;
     }
-    if (batteryData.charge < 20) {
+    if (battery.level < 20) {
       return <BatteryLow className="w-6 h-6 text-destructive" />;
     }
     return <Battery className="w-6 h-6 text-success" />;
+  };
+
+  const formatTimeRemaining = (timeInMinutes: number | null): string => {
+    if (!timeInMinutes) return 'Calculating...';
+    const hours = Math.floor(timeInMinutes / 60);
+    const minutes = timeInMinutes % 60;
+    return `${hours}h ${minutes}m`;
   };
 
   return (
@@ -92,11 +93,11 @@ export const BatteryHealth = () => {
             </div>
           </div>
           <div className="text-right">
-            <p className={`text-2xl font-bold ${getChargeColor(batteryData.charge)}`}>
-              {batteryData.charge}%
+            <p className={`text-2xl font-bold ${getChargeColor(battery.level)}`}>
+              {battery.level}%
             </p>
             <p className="text-sm text-muted-foreground">
-              {batteryData.isCharging ? 'Charging' : batteryData.timeRemaining}
+              {battery.isCharging ? 'Charging' : formatTimeRemaining(battery.timeRemaining)}
             </p>
           </div>
         </div>
@@ -105,12 +106,12 @@ export const BatteryHealth = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-foreground">Charge Level</p>
-            <span className={`text-sm font-medium ${getChargeColor(batteryData.charge)}`}>
-              {batteryData.charge}%
+            <span className={`text-sm font-medium ${getChargeColor(battery.level)}`}>
+              {battery.level}%
             </span>
           </div>
           <Progress 
-            value={batteryData.charge} 
+            value={battery.level} 
             className="h-3" 
           />
         </div>
@@ -121,13 +122,13 @@ export const BatteryHealth = () => {
             <p className="text-sm font-medium text-foreground">Health Status</p>
             <div className="flex items-center space-x-2">
               {getStatusIcon()}
-              <span className={`text-sm font-medium ${getHealthColor(batteryData.health)}`}>
-                {batteryData.health}%
+              <span className={`text-sm font-medium ${getHealthColor(battery.health)}`}>
+                {battery.health}%
               </span>
             </div>
           </div>
           <Progress 
-            value={batteryData.health} 
+            value={battery.health} 
             className="h-3"
           />
         </div>
@@ -136,31 +137,31 @@ export const BatteryHealth = () => {
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Cycle Count</p>
-            <p className="text-lg font-bold text-foreground">{batteryData.cycles}</p>
+            <p className="text-lg font-bold text-foreground">{battery.cycleCount}</p>
           </div>
           
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Temperature</p>
-            <p className="text-lg font-bold text-foreground">{batteryData.temperature}°C</p>
+            <p className="text-lg font-bold text-foreground">{battery.temperature}°C</p>
           </div>
           
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Capacity</p>
-            <p className="text-lg font-bold text-foreground">{batteryData.capacity}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Voltage</p>
+            <p className="text-lg font-bold text-foreground">{battery.voltage.toFixed(1)}V</p>
           </div>
           
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
-            <p className="text-lg font-bold text-foreground capitalize">{batteryData.status}</p>
+            <p className="text-lg font-bold text-foreground capitalize">{status}</p>
           </div>
         </div>
 
         {/* Status Message */}
         <div className="p-3 bg-muted/50 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            {batteryData.health > 80 
+            {battery.health > 80 
               ? "Battery is in excellent condition. No action needed."
-              : batteryData.health > 60
+              : battery.health > 60
               ? "Battery health is good. Consider calibrating occasionally."
               : "Battery may need replacement soon. Contact support."
             }
